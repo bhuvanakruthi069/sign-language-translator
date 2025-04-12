@@ -1,0 +1,110 @@
+1. The predict() Function – What's it doing?
+This function is called recursively using requestAnimationFrame() to:
+
+Capture frames from the webcam
+
+Use the KNN model to predict which gesture the current frame matches
+
+Output that gesture as text (or maybe speech)
+
+Here’s a step-by-step breakdown:
+
+js
+Copy
+Edit
+this.now = Date.now();
+this.elapsed = this.now - this.then;
+this.now gets the current timestamp.
+
+this.elapsed is how much time has passed since the last frame.
+
+js
+Copy
+Edit
+if (this.elapsed > this.fpsInterval) {
+This condition controls the prediction frequency (e.g., 5 times per second if fps = 5).
+
+Ensures the model doesn’t predict too often (saves CPU, avoids noise).
+
+js
+Copy
+Edit
+const exampleCount = this.knn.getClassExampleCount();
+const image = dl.fromPixels(this.video);
+Captures a frame from the webcam as a tensor (image).
+
+Checks how many examples are available for each gesture.
+
+js
+Copy
+Edit
+this.knn.predictClass(image)
+Uses the trained KNN model to predict which class the current image belongs to.
+
+It returns:
+
+res.classIndex: The predicted gesture index
+
+res.confidences[i]: Confidence score for each class
+
+js
+Copy
+Edit
+if (res.classIndex == i && res.confidences[i] > confidenceThreshold && res.classIndex != this.previousPrediction)
+This ensures that:
+
+The current gesture is different from the last one predicted.
+
+Confidence is higher than 98% (threshold).
+
+Prevents false or repeated detections.
+
+js
+Copy
+Edit
+this.predictionOutput.textOutput(words[i], this.gestureCards[i], res.confidences[i] * 100);
+Calls another class (likely to update UI and/or text-to-speech).
+
+Shows the gesture name (words[i]) and displays it.
+
+🔁 2. Why Recursively Call predict()?
+js
+Copy
+Edit
+this.pred = requestAnimationFrame(this.predict.bind(this));
+This tells the browser:
+
+"Keep calling the predict() function on every new animation frame."
+
+That makes this prediction loop live, refreshing each frame.
+
+🛑 3. What Happens If You Pause It?
+You stop this prediction loop with:
+
+js
+Copy
+Edit
+cancelAnimationFrame(this.pred);
+Which is likely done inside another method (e.g., stopTraining() or stopPrediction()).
+
+✅ Bonus Summary: Key Terms
+
+Term	                Description
+KNNImageClassifier	Classifier that uses K-Nearest Neighbors algorithm on image tensors
+dl.fromPixels()	        Converts webcam video frame into a tensor
+exampleCount	        Keeps track of how many training examples are stored per gesture
+requestAnimationFrame	Repeatedly calls a function to match screen refresh rate (~60 fps max)
+confidenceThreshold	Only accept predictions if the model is at least this confident
+this.previousPrediction	Prevents repeating the same output for the same gesture over and over
+
+🧪 In Practice
+You click "Train" while doing a gesture.
+
+The system stores that image labeled with your chosen word.
+
+After enough training examples (e.g., 30), the system is ready.
+
+You click "Translate", and the webcam begins live predictions.
+
+When the model recognizes a gesture with high confidence, it outputs astext or speech
+
